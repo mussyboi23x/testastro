@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Astro Clone - Big Arena</title>
+    <style>
+        body { background: #050505; margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
+        canvas { 
+            background: #0a0a0a; 
+            image-rendering: pixelated; 
+            object-fit: contain; 
+            width: 100%; 
+            height: 100%; 
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // This is still our pixel resolution, but represents the whole playable map
+        const V_WIDTH = 480, V_HEIGHT = 270;
+        canvas.width = V_WIDTH; canvas.height = V_HEIGHT;
+
+        let bullets = [];
+        let debris = [];
+        let shakeTime = 0;
+
+        let player = {
+            x: V_WIDTH / 2, y: V_HEIGHT / 2, vx: 0, vy: 0, angle: -Math.PI / 2,
+            speed: 2.2, pilotSwimSpeed: 0.18, maxSwimSpeed: 1.6, rotationSpeed: 0.12,
+            isTurning: false, isActionPressed: false, hullActive: true,
+            color: '#00DDFF', ammo: 3, rechargeTimer: 0, lastActionState: false
+        };
+
+        // Arena Border Constants
+        const BORDER_THICKNESS = 6;
+        const BORDER_COLOR = '#0066FF';
+
+        window.addEventListener('keydown', (e) => { 
+            if(e.code === 'KeyW') player.isTurning = true;
+            if(e.code === 'KeyE') player.isActionPressed = true;
+        });
+        window.addEventListener('keyup', (e) => { 
+            if(e.code === 'KeyW') player.isTurning = false;
+            if(e.code === 'KeyE') player.isActionPressed = false;
+        });
+
+        function spawnShatter(x, y, color) {
+            for(let i=0; i<12; i++) {
+                debris.push({
+                    x: x, y: y,
+                    vx: (Math.random() - 0.5) * 4, vy: (Math.random() - 0.5) * 4,
+                    life: 1.0, color: color
+                });
+            }
+        }
+
+        function update() {
+            if (shakeTime > 0) shakeTime--;
+
+            // 1. Rotation & Action
+            if (player.isTurning) player.angle += player.rotationSpeed;
+            if (player.isActionPressed && !player.lastActionState && player.hullActive && player.ammo > 0) {
+                player.ammo--;
+                bullets.push({
+                    x: player.x + Math.cos(player.angle) * 8, y: player.y + Math.sin(player.angle) * 8,
+                    vx: Math.cos(player.angle) * 3.3, vy: Math.sin(player.angle) * 3.3,
+                    owner: 'BLUE', life: 180
+                });
+            }
+            player.lastActionState = player.isActionPressed;
+
+            // 2. Physics
+            if (player.hullActive) {
+                player.vx = Math.cos(player.angle) * player.speed;
+                player.vy = Math.sin(player.angle) * player.speed;
+            } else {
+                if (player.isActionPressed) {
+                    player.vx += Math.cos(player.angle) * player.pilotSwimSpeed;
+                    player.vy += Math.sin(player.angle) * player.pilotSwimSpeed;
+                }
+                player.vx *= 0.96; player.vy *= 0.96;
+            }
+            player.x += player.vx; player.y += player.vy;
+
+            // 3. COLLISION: Arena Borders (Replaces Warp)
+            if (player.x < BORDER_THICKNESS) {
+                player.x = BORDER_THICKNESS;
+                if(player.hullActive) { player.hullActive = false; shakeTime = 10; spawnShatter(player.x, player.y, player.color); }
+            }
+            if (player.x > V_WIDTH - BORDER_THICKNESS) {
+                player.x = V_WIDTH - BORDER_THICKNESS;
+                if(player.hullActive) { player.hullActive = false; shakeTime = 10; spawnShatter(player.x, player.y, player.color); }
+            }
+            if (player.y < BORDER_THICKNESS) {
+                player.y = BORDER_THICKNESS;
+                if(player.hullActive) { player.hullActive = false; shakeTime = 10; spawnShatter(player.x, player.y, player.color); }
+            }
+            if (player.y > V_HEIGHT - BORDER_THICKNESS) {
+                player.y = V_HEIGHT - BORDER_THICKNESS;
+                if(player.hullActive) { player.hullActive = false; shakeTime = 10; spawnShatter(player.x, player.y, player.color); }
+            }
+
+            // 4. Bullets & Debris
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                let b = bullets[i];
+                b.x += b.vx; b.y += b.vy; b.life--;
+                // Bullets die on border
+                if (b.x < BORDER_THICKNESS || b.x > V_WIDTH - BORDER_THICKNESS || 
+                    b.y < BORDER_THICKNESS || b.y > V_HEIGHT - BORDER_THICKNESS) {
+                    bullets.splice(i, 1); continue;
+                }
+                if (b.life <= 0) bullets.splice(i, 1);
+            }
+
+            for (let i = debris.length - 1; i >= 0; i--) {
+                debris[i].x += debris[i].vx; debris[i].y += debris[i].vy;
+                debris[i].life -= 0.03;
+                if (debris[i].life <= 0) debris.splice(i, 1);
+            }
+
+            if (player.ammo < 3) {
+                player.rechargeTimer++;
+                if (player.rechargeTimer >= 42) { player.ammo++; player.rechargeTimer = 0; }
+            }
+        }
+
+        function draw() {
+            ctx.save();
+            if (shakeTime > 0) ctx.translate((Math.random() - 0.5) * 6, (Math.random() - 0.5) * 6);
+
+            // Background
+            ctx.fillStyle = '#0a0a0a';
+            ctx.fillRect(0, 0, V_WIDTH, V_HEIGHT);
+
+            // Draw Blue Arena Border
+            ctx.strokeStyle = BORDER_COLOR;
+            ctx.lineWidth = BORDER_THICKNESS;
+            ctx.strokeRect(BORDER_THICKNESS/2, BORDER_THICKNESS/2, V_WIDTH - BORDER_THICKNESS, V_HEIGHT - BORDER_THICKNESS);
+
+            // Debris
+            debris.forEach(d => {
+                ctx.globalAlpha = d.life;
+                ctx.fillStyle = d.color;
+                ctx.fillRect(Math.round(d.x), Math.round(d.y), 2, 2);
+            });
+            ctx.globalAlpha = 1.0;
+
+            // Bullets
+            bullets.forEach(b => {
+                ctx.fillStyle = player.color;
+                ctx.fillRect(Math.round(b.x)-1, Math.round(b.y)-1, 3, 3);
+            });
+
+            // Player
+            ctx.save();
+            ctx.translate(Math.round(player.x), Math.round(player.y));
+            ctx.rotate(player.angle);
+            if (player.hullActive) {
+                ctx.fillStyle = player.color;
+                ctx.beginPath(); ctx.moveTo(8,0); ctx.lineTo(-6,-6); ctx.lineTo(-3,0); ctx.lineTo(-6,6); ctx.fill();
+                ctx.fillStyle = '#FF8800';
+                for(let i=0; i<player.ammo; i++) ctx.fillRect(-11, -5+(i*4), 2, 2);
+            } else {
+                ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+                ctx.beginPath(); ctx.moveTo(6,0); ctx.lineTo(10,0); ctx.stroke();
+            }
+            ctx.fillStyle = '#FFF'; ctx.fillRect(-1.5, -1.5, 3, 3);
+            ctx.restore();
+
+            ctx.restore();
+        }
+
+        function loop() { update(); draw(); requestAnimationFrame(loop); }
+        loop();
+    </script>
+</body>
+</html>
