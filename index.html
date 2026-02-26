@@ -124,17 +124,9 @@
                 ctx.fillStyle = '#FF8800';
                 for(let i=0; i<player.ammo; i++) ctx.fillRect(-11, -5+(i*4), 2, 2);
             }
-                ctx.strokeStyle = '#AAA'; 
-                ctx.lineWidth = 1.5;
-                ctx.beginPath();
-                ctx.moveTo(6, 0); 
-                ctx.lineTo(-4, -4);
-                ctx.lineTo(-2, 0);  
-                ctx.lineTo(-4, 4); 
-                ctx.closePath();
-                ctx.stroke();
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-                ctx.fill();
+ctx.fillStyle = '#FFF'; ctx.fillRect(-1.5, -1.5, 3, 3);
+            ctx.restore();
+            ctx.restore();
         }
 
         function loop() { update(); draw(); requestAnimationFrame(loop); }
