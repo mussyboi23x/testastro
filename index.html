@@ -76,6 +76,33 @@
             }
             player.x += player.vx; player.y += player.vy;
 
+
+            // Example: obstacle course boundaries (could be generated elsewhere)
+const courseMinX = BORDER_THICKNESS;
+const courseMaxX = V_WIDTH - BORDER_THICKNESS;
+const courseMinY = BORDER_THICKNESS;
+const courseMaxY = V_HEIGHT - BORDER_THICKNESS;
+
+// Border / obstacle course collision
+if (isObstacleCourse) {
+    // Check against obstacle course bounds
+    if (player.x < courseMinX) {
+        player.x = courseMinX;
+        if (player.hullActive) { player.hullActive = false; shakeTime = 10; spawnShatter(player.x, player.y, player.color); }
+    }
+    if (player.x > courseMaxX) {
+        player.x = courseMaxX;
+        if (player.hullActive) { player.hullActive = false; shakeTime = 10; spawnShatter(player.x, player.y, player.color); }
+    }
+    if (player.y < courseMinY) {
+        player.y = courseMinY;
+        if (player.hullActive) { player.hullActive = false; shakeTime = 10; spawnShatter(player.x, player.y, player.color); }
+    }
+    if (player.y > courseMaxY) {
+        player.y = courseMaxY;
+        if (player.hullActive) { player.hullActive = false; shakeTime = 10; spawnShatter(player.x, player.y, player.color); }
+    }
+}
             if (player.x < BORDER_THICKNESS) player.x = BORDER_THICKNESS;
             if (player.x > V_WIDTH - BORDER_THICKNESS) player.x = V_WIDTH - BORDER_THICKNESS;
             if (player.y < BORDER_THICKNESS) player.y = BORDER_THICKNESS;
