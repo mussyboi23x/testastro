@@ -31,7 +31,7 @@
 
         let player = {
             x: V_WIDTH / 2, y: V_HEIGHT / 2, vx: 0, vy: 0, angle: -Math.PI / 2,
-            speed: 1.7,// speed fix
+            speed: 3.2, // Slightly faster to compensate for larger arena
             pilotSwimSpeed: 0.2, maxSwimSpeed: 2.2, rotationSpeed: 0.12,
             isTurning: false, isActionPressed: false, hullActive: true,
             color: '#00DDFF', ammo: 3, rechargeTimer: 0, lastActionState: false
@@ -119,28 +119,14 @@
             ctx.translate(Math.round(player.x), Math.round(player.y));
             ctx.rotate(player.angle);
             if (player.hullActive) {
-                // Active hull: full ship shape
                 ctx.fillStyle = player.color;
-                ctx.beginPath();
-                ctx.moveTo(8, 0);   // Nose
-                ctx.lineTo(-6, -6); // Rear top
-                ctx.lineTo(-4, 0);  // Rear middle
-                ctx.lineTo(-6, 6);  // Rear bottom
-                ctx.closePath();
-                ctx.fill();
+                ctx.beginPath(); ctx.moveTo(8,0); ctx.lineTo(-6,-6); ctx.lineTo(-4,0); ctx.lineTo(-6,6); ctx.fill();
                 ctx.fillStyle = '#FF8800';
-                for (let i = 0; i < player.ammo; i++) {
-                    ctx.fillRect(-11, -5 + (i * 4), 2, 2);
-                }
-            } else {
-                ctx.strokeStyle = '#AAA'; 
-                ctx.lineWidth = 1.5;
-                ctx.beginPath(); ctx.moveTo(6, 0); ctx.lineTo(-4, -4); ctx.lineTo(-2, 0); ctx.lineTo(-4, 4); 
-                ctx.closePath();
-                ctx.stroke();
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-                ctx.fill();
+                for(let i=0; i<player.ammo; i++) ctx.fillRect(-11, -5+(i*4), 2, 2);
             }
+            ctx.fillStyle = '#FFF'; ctx.fillRect(-1.5, -1.5, 3, 3);
+            ctx.restore();
+            ctx.restore();
         }
 
         function loop() { update(); draw(); requestAnimationFrame(loop); }
