@@ -2,28 +2,28 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Astro Party - Pilot Mode</title>
+<title>Astro Party - Clean Pixel</title>
 <style>
 body {
-    margin: 0;
-    background: #050505;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
+    margin:0;
+    background:#050505;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:100vh;
 }
 canvas {
-    background: #0a0a0a;
-    image-rendering: pixelated;
+    background:#0a0a0a;
+    image-rendering:pixelated;
 }
 </style>
 </head>
 <body>
-<canvas id="gameCanvas"></canvas>
+<canvas id="game"></canvas>
 
 <script>
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
 
 const W = 960;
 const H = 540;
@@ -31,99 +31,87 @@ canvas.width = W;
 canvas.height = H;
 
 const BORDER = 8;
-
 let bullets = [];
 
-function createPlayer(x, y, angle, color, team) {
+function createPlayer(x,y,angle,color,team){
     return {
-        x, y,
-        vx: 0,
-        vy: 0,
+        x,y,
+        vx:0, vy:0,
         angle,
-        baseSpeed: 3.2,
-        rotationSpeed: 0.12,
+        baseSpeed:3.2,
+        rotationSpeed:0.06, // LESS SENSITIVE
         color,
         team,
 
-        isTurning: false,
-        isActionPressed: false,
-        lastAction: false,
+        isTurning:false,
+        isAction:false,
+        lastAction:false,
 
-        ammo: 3,
-        recharge: 0,
+        ammo:3,
+        recharge:0,
 
-        hullBroken: false,
-        pilotSpeedFactor: 0.3
+        hullBroken:false,
+        pilotSpeedFactor:0.3
     };
 }
 
-let player1 = createPlayer(W/2, H/2+100, -Math.PI/2, "#00DDFF", "BLUE");
-let player2 = createPlayer(W/2, H/2-100, Math.PI/2, "#FF0000", "RED");
+let player1 = createPlayer(W/2, H/2+120, -Math.PI/2, "#00DDFF","BLUE");
+let player2 = createPlayer(W/2, H/2-120, Math.PI/2, "#FF0000","RED");
 
-window.addEventListener("keydown", e=>{
+window.addEventListener("keydown",e=>{
     if(e.code==="KeyW") player1.isTurning=true;
-    if(e.code==="KeyE") player1.isActionPressed=true;
-
+    if(e.code==="KeyE") player1.isAction=true;
     if(e.code==="KeyO") player2.isTurning=true;
-    if(e.code==="KeyP") player2.isActionPressed=true;
+    if(e.code==="KeyP") player2.isAction=true;
 });
 
-window.addEventListener("keyup", e=>{
+window.addEventListener("keyup",e=>{
     if(e.code==="KeyW") player1.isTurning=false;
-    if(e.code==="KeyE") player1.isActionPressed=false;
-
+    if(e.code==="KeyE") player1.isAction=false;
     if(e.code==="KeyO") player2.isTurning=false;
-    if(e.code==="KeyP") player2.isActionPressed=false;
+    if(e.code==="KeyP") player2.isAction=false;
 });
 
 function breakHull(p){
-    p.hullBroken = true;
-    p.pilotSpeedFactor = 0.3;
+    p.hullBroken=true;
+    p.pilotSpeedFactor=0.3;
 }
 
 function updatePlayer(p){
 
-    if(!p.hullBroken){
+    let rot = p.rotationSpeed;
+    if(p.hullBroken) rot *= 0.6; // pilot turns slower
 
-        if(p.isTurning) p.angle += p.rotationSpeed;
+    if(p.isTurning) p.angle += rot;
 
-        // thrust
-        p.vx += Math.cos(p.angle) * p.baseSpeed * 0.12;
-        p.vy += Math.sin(p.angle) * p.baseSpeed * 0.12;
+    let maxSpeed = p.baseSpeed;
 
-        p.vx *= 0.985;
-        p.vy *= 0.985;
-
-        let sp = Math.hypot(p.vx,p.vy);
-        if(sp>p.baseSpeed){
-            p.vx = (p.vx/sp)*p.baseSpeed;
-            p.vy = (p.vy/sp)*p.baseSpeed;
-        }
-
-    } else {
-
-        // PILOT MODE
-        if(p.isTurning) p.angle += p.rotationSpeed*0.8;
-
-        let pilotMax = p.baseSpeed * p.pilotSpeedFactor;
-
-        p.vx += Math.cos(p.angle) * pilotMax * 0.08;
-        p.vy += Math.sin(p.angle) * pilotMax * 0.08;
-
+    if(p.hullBroken){
+        maxSpeed *= p.pilotSpeedFactor;
+        p.vx += Math.cos(p.angle)*maxSpeed*0.08;
+        p.vy += Math.sin(p.angle)*maxSpeed*0.08;
         p.vx *= 0.99;
         p.vy *= 0.99;
 
         let sp = Math.hypot(p.vx,p.vy);
-
-        // Build momentum over time
-        if(sp > pilotMax*0.8 && p.pilotSpeedFactor < 0.8){
+        if(sp > maxSpeed*0.8 && p.pilotSpeedFactor < 0.8){
             p.pilotSpeedFactor += 0.002;
         }
+        if(sp > maxSpeed){
+            p.vx = (p.vx/sp)*maxSpeed;
+            p.vy = (p.vy/sp)*maxSpeed;
+        }
 
-        let cap = p.baseSpeed * p.pilotSpeedFactor;
-        if(sp > cap){
-            p.vx = (p.vx/sp)*cap;
-            p.vy = (p.vy/sp)*cap;
+    } else {
+        p.vx += Math.cos(p.angle)*maxSpeed*0.12;
+        p.vy += Math.sin(p.angle)*maxSpeed*0.12;
+        p.vx *= 0.985;
+        p.vy *= 0.985;
+
+        let sp = Math.hypot(p.vx,p.vy);
+        if(sp > maxSpeed){
+            p.vx = (p.vx/sp)*maxSpeed;
+            p.vy = (p.vy/sp)*maxSpeed;
         }
     }
 
@@ -134,20 +122,19 @@ function updatePlayer(p){
     p.y = Math.max(BORDER, Math.min(H-BORDER, p.y));
 
     // Shooting
-    if(p.isActionPressed && !p.lastAction && p.ammo>0){
+    if(p.isAction && !p.lastAction && p.ammo>0){
         p.ammo--;
         bullets.push({
-            x: p.x + Math.cos(p.angle)*8,
-            y: p.y + Math.sin(p.angle)*8,
-            vx: Math.cos(p.angle)*7,
-            vy: Math.sin(p.angle)*7,
-            team: p.team,
-            life: 240
+            x:p.x + Math.cos(p.angle)*14,
+            y:p.y + Math.sin(p.angle)*14,
+            vx:Math.cos(p.angle)*7,
+            vy:Math.sin(p.angle)*7,
+            team:p.team,
+            life:240
         });
     }
-    p.lastAction = p.isActionPressed;
+    p.lastAction=p.isAction;
 
-    // Recharge
     if(p.ammo<3){
         p.recharge++;
         if(p.recharge>=42){
@@ -158,7 +145,6 @@ function updatePlayer(p){
 }
 
 function update(){
-
     updatePlayer(player1);
     updatePlayer(player2);
 
@@ -170,9 +156,7 @@ function update(){
 
         [player1,player2].forEach(p=>{
             if(!p.hullBroken && b.team!==p.team){
-                let dx=b.x-p.x;
-                let dy=b.y-p.y;
-                if(Math.hypot(dx,dy)<10){
+                if(Math.hypot(b.x-p.x,b.y-p.y)<14){
                     breakHull(p);
                 }
             }
@@ -184,38 +168,43 @@ function update(){
     }
 }
 
-function drawPlayer(p){
+function drawShip(p){
     ctx.save();
     ctx.translate(p.x,p.y);
     ctx.rotate(p.angle);
 
-    if(!p.hullBroken){
+    ctx.fillStyle=p.color;
 
-        ctx.fillStyle=p.color;
-        ctx.beginPath();
-        ctx.moveTo(8,0);
-        ctx.lineTo(-6,-6);
-        ctx.lineTo(-4,0);
-        ctx.lineTo(-6,6);
-        ctx.fill();
+    // Bigger ship
+    ctx.beginPath();
+    ctx.moveTo(14,0);
+    ctx.lineTo(-10,-8);
+    ctx.lineTo(-6,0);
+    ctx.lineTo(-10,8);
+    ctx.fill();
 
-        ctx.fillStyle="#FFF";
-        ctx.fillRect(-1.5,-1.5,3,3);
+    ctx.fillStyle="#FFFFFF";
+    ctx.fillRect(-2,-2,4,4);
 
-    } else {
+    ctx.restore();
+}
 
-        // BODY
-        ctx.fillStyle=p.color;
-        ctx.beginPath();
-        ctx.arc(-2,0,5,0,Math.PI*2);
-        ctx.fill();
+function drawPilot(p){
+    ctx.save();
+    ctx.translate(p.x,p.y);
+    ctx.rotate(p.angle);
 
-        // HEAD (white, facing direction)
-        ctx.fillStyle="#FFFFFF";
-        ctx.beginPath();
-        ctx.arc(5,0,4,0,Math.PI*2);
-        ctx.fill();
-    }
+    // tiny body
+    ctx.fillStyle=p.color;
+    ctx.fillRect(-3,-2,4,4);
+
+    // pixel skull head
+    ctx.fillStyle="#FFFFFF";
+    ctx.fillRect(3,-3,5,5);
+
+    ctx.fillStyle="#000000";
+    ctx.fillRect(4,-2,1,1);
+    ctx.fillRect(6,-2,1,1);
 
     ctx.restore();
 }
@@ -233,8 +222,11 @@ function draw(){
         ctx.fillRect(b.x-2,b.y-2,4,4);
     });
 
-    drawPlayer(player1);
-    drawPlayer(player2);
+    if(player1.hullBroken) drawPilot(player1);
+    else drawShip(player1);
+
+    if(player2.hullBroken) drawPilot(player2);
+    else drawShip(player2);
 }
 
 function loop(){
